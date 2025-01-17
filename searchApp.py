@@ -1,26 +1,28 @@
 import streamlit as st
 from elasticsearch import Elasticsearch
 from sentence_transformers import SentenceTransformer
-import os
 
-indexName = "all_products"
-elastic_password = os.getenv("ELASTIC_PASSWORD")
+elastic_password = st.secrets.get("ELASTIC_PASSWORD")
 if not elastic_password:
-    raise ValueError("Environment variable ELASTIC_PASSWORD is not set.")
+    st.error("Elastic password is not set in secrets.")
+    st.stop()
+
 try:
+
     es = Elasticsearch(
         "https://localhost:9200",
         basic_auth=("elastic", elastic_password),
-        ca_certs="D:/elasticsearch-8.17.0-windows-x86_64/elasticsearch-8.17.0/config/certs/http_ca.crt",
+        ca_certs=st.secrets["CA_CERT_PATH"],
     )
 
+    if es.ping():
+        st.success("Successfully connected to ElasticSearch!")
+    else:
+        st.error("Failed to connect to Elasticsearch.")
+        st.stop()
 except ConnectionError as e:
-    print("Connection Error:", e)
-
-if es.ping():
-    print("Succesfully connected to ElasticSearch!!")
-else:
-    print("Oops!! Can not connect to Elasticsearch!")
+    st.error(f"Connection Error: {e}")
+    st.stop()
 
 
 def search(input_keyword):
@@ -37,7 +39,6 @@ def search(input_keyword):
         index="all_products", knn=query, source=["ProductName", "Description"]
     )
     results = res["hits"]["hits"]
-
     return results
 
 
@@ -55,12 +56,12 @@ def main():
                         try:
                             st.header(f"{result['_source']['ProductName']}")
                         except Exception as e:
-                            print(e)
+                            st.warning(f"Error displaying product name: {e}")
 
                         try:
                             st.write(f"Description: {result['_source']['Description']}")
                         except Exception as e:
-                            print(e)
+                            st.warning(f"Error displaying description: {e}")
                         st.divider()
 
 
