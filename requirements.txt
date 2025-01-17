@@ -1,0 +1,6 @@
+elasticsearch
+pandas
+ipykernel
+sentence_transformers
+streamlit
+python-dotenv
